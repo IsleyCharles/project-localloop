@@ -3,45 +3,53 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Register User
-  Future<String?> signUp(String email, String password, String role) async {
-    try {
-      UserCredential result = await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      User user = result.user!;
-      await _db.collection('users').doc(user.uid).set({
-        'uid': user.uid,
-        'email': email,
-        'role': role,
-      });
-      return null;
-    } catch (e) {
-      return e.toString();
-    }
-  }
-
-  // Sign In User
+  // Login method
   Future<String?> login(String email, String password) async {
     try {
       await _auth.signInWithEmailAndPassword(email: email, password: password);
-      return null;
-    } catch (e) {
-      return e.toString();
+      return null; // success
+    } on FirebaseAuthException catch (e) {
+      return e.message; // return error message
     }
   }
 
-  // Get Current User Role
-  Future<String?> getUserRole(String uid) async {
-    var doc = await _db.collection('users').doc(uid).get();
-    return doc.data()?['role'];
+  // Sign up method
+  Future<String?> signUp(String email, String password, String role) async {
+    try {
+      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      // Save user role in Firestore
+      await _firestore.collection('users').doc(userCredential.user!.uid).set({
+        'email': email,
+        'role': role,
+      });
+      return null; // Success
+    } on FirebaseAuthException catch (e) {
+      return e.message;
+    } catch (e) {
+      return 'An unknown error occurred';
+    }
   }
 
-  // Logout
-  Future<void> logout() async {
-    await _auth.signOut();
+  // Get UID of current user
+  String? getCurrentUserUid() {
+    return _auth.currentUser?.uid;
+  }
+
+  // Fetch user role from Firestore
+  Future<String?> getUserRole(String uid) async {
+    try {
+      final doc = await _firestore.collection('users').doc(uid).get();
+      if (doc.exists) {
+        return doc.data()?['role']; // 'admin', 'ngo', or 'volunteer'
+      }
+    } catch (e) {
+      print("Error fetching user role: $e");
+    }
+    return null;
   }
 }
