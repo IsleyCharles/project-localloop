@@ -2,7 +2,7 @@
   "project_info": {
     "project_number": "693648893064",
     "project_id": "localloop-20504",
-    "storage_bucket": "localloop-20504.firebasestorage.app"
+    "storageBucket": "localloop-20504.appspot.com"
   },
   "client": [
     {

@@ -1,14 +1,25 @@
 import 'package:flutter/material.dart';
+import '../widgets/dashboard_layout.dart';
 
 class VolunteerDashboard extends StatelessWidget {
   const VolunteerDashboard({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Volunteer Dashboard')),
-      body: const Center(
-        child: Text('Welcome, Volunteer! You can discover events and track your hours here.'),
+    return DashboardLayout(
+      role: 'volunteer',
+      content: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ElevatedButton(
+            onPressed: () {},
+            child: const Text('Find Events'),
+          ),
+          ElevatedButton(
+            onPressed: () {},
+            child: const Text('My Participation'),
+          ),
+        ],
       ),
     );
   }

@@ -1,27 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-
-// Import your screens
+import 'package:localloop/firebase_options.dart';
 import 'auth/login_screen.dart';
 import 'auth/signup_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
-  runApp(MyApp());
-}
 
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform, // ✅ Fix is here
+  );
+
+  runApp(const MyApp());
+}
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'LocalLoop',
       theme: ThemeData(
-        useMaterial3: true, // Material 3 for modern UI
+        useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
       ),
-      
-      // 👇👇👇 Set initial screen and routes
       home: const LoginScreen(),
       routes: {
         '/login': (context) => const LoginScreen(),

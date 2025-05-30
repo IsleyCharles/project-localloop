@@ -34,14 +34,18 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (role == 'admin') {
+        if (!mounted) return;
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const AdminDashboard()));
       } else if (role == 'ngo') {
+        if (!mounted) return;
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const NGODashboard()));
       } else if (role == 'volunteer') {
+        if (!mounted) return;
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const VolunteerDashboard()));
       } else {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Unknown role.")),
+          const SnackBar(content: Text("Unknown or missing role.")),
         );
       }
     } else {
