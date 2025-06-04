@@ -1,10 +1,18 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'event_detail_screen.dart';
 
 // ignore: use_key_in_widget_constructors
-class VolunteerDashboardScreen extends StatelessWidget {
-  final String uid = FirebaseAuth.instance.currentUser!.uid;
+class VolunteerDashboardScreen extends StatefulWidget {
+  const VolunteerDashboardScreen({super.key});
+
+  @override
+  VolunteerDashboardScreenState createState() => VolunteerDashboardScreenState();
+}
+
+class VolunteerDashboardScreenState extends State<VolunteerDashboardScreen> {
+  String searchTerm = '';
 
   @override
   Widget build(BuildContext context) {
@@ -21,51 +29,74 @@ class VolunteerDashboardScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('events')
-            .orderBy('timestamp', descending: true)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          }
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: TextField(
+              onChanged: (value) => setState(() => searchTerm = value),
+              decoration: InputDecoration(
+                hintText: 'Search events...',
+                prefixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ),
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('events')
+                  .orderBy('timestamp', descending: true)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Center(child: CircularProgressIndicator());
+                }
 
-          final events = snapshot.data!.docs;
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return Center(child: Text("No events available."));
+                }
 
-          if (events.isEmpty) {
-            return Center(child: Text("No events available."));
-          }
+                final filteredEvents = snapshot.data!.docs.where((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  final title = data['title']?.toLowerCase() ?? '';
+                  return title.contains(searchTerm.toLowerCase());
+                }).toList();
 
-          return ListView.builder(
-            itemCount: events.length,
-            itemBuilder: (context, index) {
-              var event = events[index].data() as Map<String, dynamic>;
-              return Card(
-                margin: EdgeInsets.all(10),
-                child: ListTile(
-                  title: Text(event['title'] ?? ''),
-                  subtitle: Text(event['location'] ?? ''),
-                  trailing: Text(
-                    event['date'] != null
-                        ? (event['date'] is Timestamp
-                            ? (event['date'] as Timestamp)
-                                .toDate()
-                                .toLocal()
-                                .toString()
-                                .split(' ')[0]
-                            : event['date'].toString())
-                        : '',
-                  ),
-                  onTap: () {
-                    // Navigate to detailed event screen
+                if (filteredEvents.isEmpty) {
+                  return Center(child: Text("No matching events found."));
+                }
+
+                return ListView.builder(
+                  itemCount: filteredEvents.length,
+                  itemBuilder: (context, index) {
+                    final doc = filteredEvents[index];
+                    final data = doc.data() as Map<String, dynamic>;
+                    return ListTile(
+                      title: Text(data['title'] ?? 'No Title'),
+                      subtitle: Text(data['location'] ?? 'No Location'),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => EventDetailScreen(
+                              eventData: {
+                                ...data,
+                                'docRef': doc.reference,
+                              },
+                            ),
+                          )
+                        );
+                      },
+                    );
                   },
-                ),
-              );
-            },
-          );
-        },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
 }
+ 
