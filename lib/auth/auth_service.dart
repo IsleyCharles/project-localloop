@@ -22,19 +22,17 @@ class AuthService {
 
   Future<String?> getUserRole(String uid) async {
     try {
-      DocumentSnapshot doc = await _firestore.collection('users').doc(uid).get();
-      
-      if (doc.exists) {
+      print('Fetching user role for uid: $uid');
+      final doc = await _firestore.collection('users').doc(uid).get();
+      print('Document exists: ${doc.exists}');
+      print('Document data: ${doc.data()}');
+      if (doc.exists && doc.data() != null) {
         final data = doc.data() as Map<String, dynamic>;
-        print("✅ Fetched user role: ${data['role']}");
-        return data['role'];
-      } else {
-        print("⚠️ No such user document found in Firestore.");
-        return null;
+        return data['role'] as String?;
       }
     } catch (e) {
-      print("🔥 Failed to fetch user role: $e");
-      return null;
+      print("Error fetching user role: $e");
     }
+    return null;
   }
 }
