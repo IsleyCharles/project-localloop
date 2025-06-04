@@ -68,7 +68,7 @@ class _SignupScreenState extends State<SignupScreen> {
       } else {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const VolunteerDashboard()),
+          MaterialPageRoute(builder: (_) => VolunteerDashboardScreen()), // Fixed class name
         );
       }
     } on FirebaseAuthException catch (e) {

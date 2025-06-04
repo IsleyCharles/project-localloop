@@ -41,7 +41,7 @@ class _LoginScreenState extends State<LoginScreen> {
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const NGODashboard()));
       } else if (role == 'volunteer') {
         if (!mounted) return;
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const VolunteerDashboard()));
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => VolunteerDashboardScreen()));
       } else {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
