@@ -58,7 +58,7 @@ class _SignupScreenState extends State<SignupScreen> {
         // ignore: use_build_context_synchronously
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const AdminDashboard()),
+          MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
         );
       } else if (_selectedRole == 'ngo') {
         Navigator.pushReplacement(
