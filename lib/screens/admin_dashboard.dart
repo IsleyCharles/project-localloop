@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
@@ -9,114 +10,82 @@ class AdminDashboardScreen extends StatefulWidget {
 }
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
-  final _titleController = TextEditingController();
-  final _locationController = TextEditingController();
-  final _maxParticipantsController = TextEditingController();
-
-  void _showEventDialog({DocumentSnapshot? document}) {
-    final isEditing = document != null;
-    DateTime selectedDate = DateTime.now();
-
-    if (isEditing) {
-      _titleController.text = document!['title'];
-      _locationController.text = document['location'];
-      selectedDate = (document['date'] as Timestamp).toDate();
-      _maxParticipantsController.text = document['maxParticipants']?.toString() ?? '50';
-    } else {
-      _titleController.clear();
-      _locationController.clear();
-      _maxParticipantsController.text = '50';
-    }
-
-    showDialog(
+  void _deleteEvent(DocumentReference eventRef) async {
+    final confirm = await showDialog<bool>(
       context: context,
-      builder: (_) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: Text(isEditing ? 'Edit Event' : 'Add Event'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(controller: _titleController, decoration: InputDecoration(labelText: 'Title')),
-                TextField(controller: _locationController, decoration: InputDecoration(labelText: 'Location')),
-                TextField(
-                  controller: _maxParticipantsController,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(labelText: 'Max Participants'),
-                ),
-                SizedBox(height: 10),
-                Row(
-                  children: [
-                    Text("Date: "+selectedDate.toLocal().toString().split(' ')[0]),
-                    Spacer(),
-                    TextButton(
-                      onPressed: () async {
-                        final picked = await showDatePicker(
-                          context: context,
-                          initialDate: selectedDate,
-                          firstDate: DateTime(2023),
-                          lastDate: DateTime(2100),
-                        );
-                        if (picked != null) {
-                          setState(() {
-                            selectedDate = picked;
-                          });
-                        }
-                      },
-                      child: Text('Pick Date'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: Text('Cancel')),
-            ElevatedButton(
-              onPressed: () async {
-                final title = _titleController.text.trim();
-                final location = _locationController.text.trim();
-                final max = int.tryParse(_maxParticipantsController.text) ?? 50;
-
-                if (title.isEmpty || location.isEmpty) return;
-
-                final eventData = {
-                  'title': title,
-                  'location': location,
-                  'maxParticipants': max,
-                  'date': Timestamp.fromDate(selectedDate),
-                  'timestamp': Timestamp.now(),
-                };
-
-                if (isEditing) {
-                  await document.reference.update(eventData);
-                } else {
-                  await FirebaseFirestore.instance.collection('events').add(eventData);
-                }
-
-                Navigator.pop(context);
-              },
-              child: Text(isEditing ? 'Update' : 'Add'),
-            ),
-          ],
-        ),
+      builder: (_) => AlertDialog(
+        title: Text('Delete Event'),
+        content: Text('Are you sure you want to delete this event?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: Text('Delete')),
+        ],
       ),
     );
+
+    if (confirm == true) {
+      await eventRef.delete();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Event deleted')));
+    }
   }
 
-  void _deleteEvent(DocumentReference docRef) async {
-    await docRef.delete();
+  void _sendNotificationToParticipants(
+    DocumentReference eventRef,
+    List<dynamic> participants,
+  ) async {
+    final TextEditingController messageController = TextEditingController();
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Send Notification'),
+        content: TextField(
+          controller: messageController,
+          maxLines: 3,
+          decoration: InputDecoration(hintText: 'Enter notification message'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: Text('Send')),
+        ],
+      ),
+    );
+
+    if (result == true && messageController.text.trim().isNotEmpty) {
+      final message = messageController.text.trim();
+
+      for (var uid in participants) {
+        await FirebaseFirestore.instance
+            .collection('notifications')
+            .add({
+              'toUser': uid,
+              'eventRef': eventRef,
+              'message': message,
+              'timestamp': Timestamp.now(),
+            });
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Notification sent')));
+    }
+  }
+
+  void _logout() {
+    FirebaseAuth.instance.signOut();
+    // Navigate to login screen
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Admin Dashboard'),
+        title: const Text(
+          'Admin Dashboard',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
         actions: [
           IconButton(
-            icon: Icon(Icons.add),
-            onPressed: () => _showEventDialog(),
+            icon: const Icon(Icons.logout),
+            onPressed: _logout,
           ),
         ],
       ),
@@ -126,30 +95,84 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             .orderBy('timestamp', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
+          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
 
-          final events = snapshot.data!.docs;
-          if (events.isEmpty) return Center(child: Text('No events'));
+          final docs = snapshot.data!.docs;
+          if (docs.isEmpty) return const Center(child: Text('No events found'));
 
           return ListView.builder(
-            itemCount: events.length,
+            padding: const EdgeInsets.all(12),
+            itemCount: docs.length,
             itemBuilder: (context, index) {
-              final doc = events[index];
+              final doc = docs[index];
               final data = doc.data() as Map<String, dynamic>;
+              final title = data['title'] ?? 'No Title';
+              final date = (data['date'] as Timestamp).toDate();
+              final location = data['location'] ?? 'Unknown';
+              final participants = (data['participants'] as List<dynamic>?) ?? [];
 
-              return ListTile(
-                title: Text(data['title'] ?? 'Untitled'),
-                subtitle: Text(data['location'] ?? 'Unknown'),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
+              return Card(
+                elevation: 4,
+                margin: const EdgeInsets.symmetric(vertical: 10),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                child: ExpansionTile(
+                  title: Text(
+                    title,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  subtitle: Text(
+                    '📍 $location | 📅 ${date.toLocal().toString().split(' ')[0]}',
+                    style: const TextStyle(fontSize: 14, color: Colors.grey),
+                  ),
                   children: [
-                    IconButton(
-                      icon: Icon(Icons.edit),
-                      onPressed: () => _showEventDialog(document: doc),
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.delete, color: Colors.red),
-                      onPressed: () => _deleteEvent(doc.reference),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '👥 Participants (${participants.length})',
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 8),
+                          participants.isEmpty
+                              ? const Text('No participants yet')
+                              : Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: participants.map((p) => Text('• $p')).toList(),
+                                ),
+                          const SizedBox(height: 16),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              ElevatedButton.icon(
+                                onPressed: () => _deleteEvent(doc.reference),
+                                icon: const Icon(Icons.delete),
+                                label: const Text('Delete'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.red,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              ),
+                              ElevatedButton.icon(
+                                onPressed: () => _sendNotificationToParticipants(doc.reference, participants),
+                                icon: const Icon(Icons.notifications),
+                                label: const Text('Notify'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blue,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
