@@ -13,6 +13,11 @@ class VolunteerDashboardScreen extends StatefulWidget {
 
 class VolunteerDashboardScreenState extends State<VolunteerDashboardScreen> {
   String searchTerm = '';
+  String filterType = 'upcoming'; // 'upcoming' or 'past'
+
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,6 +47,22 @@ class VolunteerDashboardScreenState extends State<VolunteerDashboardScreen> {
               ),
             ),
           ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ChoiceChip(
+                label: Text('Upcoming'),
+                selected: filterType == 'upcoming',
+                onSelected: (_) => setState(() => filterType = 'upcoming'),
+              ),
+              SizedBox(width: 10),
+              ChoiceChip(
+                label: Text('Past'),
+                selected: filterType == 'past',
+                onSelected: (_) => setState(() => filterType = 'past'),
+              ),
+            ],
+          ),
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
@@ -57,10 +78,22 @@ class VolunteerDashboardScreenState extends State<VolunteerDashboardScreen> {
                   return Center(child: Text("No events available."));
                 }
 
+                final now = DateTime.now();
                 final filteredEvents = snapshot.data!.docs.where((doc) {
                   final data = doc.data() as Map<String, dynamic>;
                   final title = data['title']?.toLowerCase() ?? '';
-                  return title.contains(searchTerm.toLowerCase());
+                  final eventDate = data['date'] is Timestamp
+                      ? (data['date'] as Timestamp).toDate()
+                      : DateTime.tryParse(data['date']?.toString() ?? '');
+                  if (eventDate == null) return false;
+                  final matchesSearch = title.contains(searchTerm.toLowerCase());
+                  final isUpcoming = eventDate.isAfter(now) || _isSameDay(eventDate, now);
+                  final isPast = eventDate.isBefore(now) && !_isSameDay(eventDate, now);
+                  if (filterType == 'upcoming') {
+                    return matchesSearch && isUpcoming;
+                  } else {
+                    return matchesSearch && isPast;
+                  }
                 }).toList();
 
                 if (filteredEvents.isEmpty) {
@@ -72,9 +105,46 @@ class VolunteerDashboardScreenState extends State<VolunteerDashboardScreen> {
                   itemBuilder: (context, index) {
                     final doc = filteredEvents[index];
                     final data = doc.data() as Map<String, dynamic>;
+                    final participants = data['participants'] as List<dynamic>? ?? [];
+                    final participantCount = participants.length;
+                    final eventDate = data['date'] is Timestamp
+                        ? (data['date'] as Timestamp).toDate()
+                        : DateTime.tryParse(data['date']?.toString() ?? '');
+                    bool isToday = eventDate != null && _isSameDay(eventDate, DateTime.now());
+                    bool isFull = participantCount >= (data['maxParticipants'] ?? 9999);
                     return ListTile(
-                      title: Text(data['title'] ?? 'No Title'),
-                      subtitle: Text(data['location'] ?? 'No Location'),
+                      title: Row(
+                        children: [
+                          Expanded(child: Text(data['title'] ?? 'No Title')),
+                          if (isToday)
+                            Container(
+                              margin: EdgeInsets.only(left: 6),
+                              padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.shade100,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text('Today', style: TextStyle(fontSize: 12)),
+                            ),
+                          if (isFull)
+                            Container(
+                              margin: EdgeInsets.only(left: 6),
+                              padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.red.shade100,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text('Full', style: TextStyle(fontSize: 12)),
+                            ),
+                        ],
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(data['location'] ?? 'No Location'),
+                          Text('👥 Participants: $participantCount'),
+                        ],
+                      ),
                       onTap: () {
                         Navigator.push(
                           context,
@@ -85,7 +155,7 @@ class VolunteerDashboardScreenState extends State<VolunteerDashboardScreen> {
                                 'docRef': doc.reference,
                               },
                             ),
-                          )
+                          ),
                         );
                       },
                     );
@@ -99,4 +169,3 @@ class VolunteerDashboardScreenState extends State<VolunteerDashboardScreen> {
     );
   }
 }
- 
