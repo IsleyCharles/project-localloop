@@ -147,6 +147,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   'maxParticipants': maxParticipants,
                 });
               } else {
+                final uid = _auth.currentUser?.uid;
                 await FirebaseFirestore.instance.collection('events').add({
                   'title': title,
                   'date': Timestamp.fromDate(date),
@@ -154,6 +155,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   'participants': <String>[],
                   'maxParticipants': maxParticipants,
                   'timestamp': Timestamp.now(),
+                  'createdBy': uid,
+                  'ngoId': uid,
                 });
               }
               Navigator.pop(context);

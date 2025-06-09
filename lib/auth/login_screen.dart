@@ -38,7 +38,7 @@ class _LoginScreenState extends State<LoginScreen> {
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const AdminDashboardScreen()));
       } else if (role == 'ngo') {
         if (!mounted) return;
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const NGODashboard()));
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const NgoDashboardScreen()));
       } else if (role == 'volunteer') {
         if (!mounted) return;
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => VolunteerDashboardScreen()));
