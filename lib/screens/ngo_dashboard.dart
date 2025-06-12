@@ -288,6 +288,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showCreateEventDialog,
+        // ignore: sort_child_properties_last
         child: const Icon(Icons.add),
         tooltip: 'Create Event',
       ),
