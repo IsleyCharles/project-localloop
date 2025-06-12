@@ -337,6 +337,37 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
+  void _showFeedbackList(DocumentReference eventRef) async {
+    final snapshot = await eventRef.collection('feedback').orderBy('timestamp', descending: true).get();
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Event Feedback'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: snapshot.docs.isEmpty
+              ? const Text("No feedback yet.")
+              : ListView(
+                  shrinkWrap: true,
+                  children: snapshot.docs.map((doc) {
+                    final data = doc.data();
+                    final timestamp = (data['timestamp'] as Timestamp).toDate();
+                    return ListTile(
+                      leading: const Icon(Icons.comment),
+                      title: Text(data['feedback'] ?? ''),
+                      subtitle: Text(DateFormat.yMMMd().add_jm().format(timestamp)),
+                    );
+                  }).toList(),
+                ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -550,6 +581,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                           borderRadius: BorderRadius.circular(12),
                                         ),
                                       ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.feedback),
+                                      tooltip: "View Feedback",
+                                      onPressed: () => _showFeedbackList(doc.reference),
                                     ),
                                   ],
                                 ),
