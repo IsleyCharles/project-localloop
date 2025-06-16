@@ -1,296 +1,302 @@
-// ignore_for_file: prefer_interpolation_to_compose_strings, curly_braces_in_flow_control_structures
-
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-class NgoDashboardScreen extends StatefulWidget {
-  const NgoDashboardScreen({super.key});
-
-  @override
-  State<NgoDashboardScreen> createState() => _NgoDashboardScreenState();
+void main() {
+  runApp(const MaterialApp(home: NgoDashboardMain()));
 }
 
-class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
-  final _auth = FirebaseAuth.instance;
-  String? _ngoUid;
+class NgoDashboardMain extends StatefulWidget {
+  const NgoDashboardMain({super.key});
 
   @override
-  void initState() {
-    super.initState();
-    final user = _auth.currentUser;
-    if (user != null) {
-      _ngoUid = user.uid;
-      debugPrint("NGO UID: $_ngoUid");
-    } else {
-      debugPrint("No user is logged in");
-    }
-  }
+  State<NgoDashboardMain> createState() => _NgoDashboardMainState();
+}
 
-  void _deleteEvent(DocumentReference eventRef) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Delete Event'),
-        content: const Text('Are you sure you want to delete this event?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete')),
-        ],
-      ),
-    );
-    if (confirm == true) {
-      await eventRef.delete();
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Event deleted')));
-    }
-  }
+class _NgoDashboardMainState extends State<NgoDashboardMain> {
+  int _currentIndex = 0;
 
-  void _postEventReport(DocumentReference eventRef) {
-    final reportController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Post Event Report'),
-        content: TextField(
-          controller: reportController,
-          maxLines: 4,
-          decoration: const InputDecoration(hintText: 'Enter report or update...'),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () async {
-              if (reportController.text.trim().isNotEmpty) {
-                await eventRef.update({
-                  'report': reportController.text.trim(),
-                  'reportTimestamp': Timestamp.now(),
-                });
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Report posted')));
-              }
-            },
-            child: const Text('Post'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _editEvent(DocumentReference eventRef, Map<String, dynamic> eventData) {
-    final titleController = TextEditingController(text: eventData['title']);
-    final locationController = TextEditingController(text: eventData['location']);
-    DateTime selectedDate = (eventData['date'] as Timestamp?)?.toDate() ?? DateTime.now();
-
-    showDialog(
-      context: context,
-      builder: (_) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('Edit Event'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(controller: titleController, decoration: const InputDecoration(labelText: 'Title')),
-              TextField(controller: locationController, decoration: const InputDecoration(labelText: 'Location')),
-              const SizedBox(height: 12),
-              Text('Date: ${DateFormat.yMMMd().format(selectedDate)}'),
-              TextButton(
-                child: const Text('Change Date'),
-                onPressed: () async {
-                  final picked = await showDatePicker(
-                    context: context,
-                    initialDate: selectedDate,
-                    firstDate: DateTime(2020),
-                    lastDate: DateTime(2100),
-                  );
-                  if (picked != null) {
-                    setState(() => selectedDate = picked);
-                  }
-                },
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-            ElevatedButton(
-              onPressed: () async {
-                await eventRef.update({
-                  'title': titleController.text.trim(),
-                  'location': locationController.text.trim(),
-                  'date': Timestamp.fromDate(selectedDate),
-                });
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Event updated')));
-              },
-              child: const Text('Save'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showCreateEventDialog() {
-    final titleController = TextEditingController();
-    final locationController = TextEditingController();
-    final maxParticipantsController = TextEditingController();
-    DateTime? selectedDate;
-
-    showDialog(
-      context: context,
-      builder: (_) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('Create Event'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(controller: titleController, decoration: const InputDecoration(labelText: 'Title')),
-                TextField(controller: locationController, decoration: const InputDecoration(labelText: 'Location')),
-                TextField(
-                  controller: maxParticipantsController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Max Participants'),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(selectedDate == null
-                          ? 'No date chosen'
-                          : 'Date: ${DateFormat.yMMMd().format(selectedDate!)}'),
-                    ),
-                    TextButton(
-                      onPressed: () async {
-                        final picked = await showDatePicker(
-                          context: context,
-                          initialDate: DateTime.now(),
-                          firstDate: DateTime(2020),
-                          lastDate: DateTime(2100),
-                        );
-                        if (picked != null) {
-                          setState(() => selectedDate = picked);
-                        }
-                      },
-                      child: const Text('Select Date'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-            ElevatedButton(
-              onPressed: () async {
-                final title = titleController.text.trim();
-                final location = locationController.text.trim();
-                final maxParticipants = int.tryParse(maxParticipantsController.text.trim());
-
-                if (title.isEmpty || location.isEmpty || selectedDate == null || maxParticipants == null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('All fields are required.')),
-                  );
-                  return;
-                }
-
-                await FirebaseFirestore.instance.collection('events').add({
-                  'title': title,
-                  'location': location,
-                  'date': Timestamp.fromDate(selectedDate!),
-                  'ngoId': _ngoUid,
-                  'createdBy': _ngoUid,
-                  'participants': <String>[],
-                  'attendance': <String, bool>{},
-                  'report': '',
-                  'maxParticipants': maxParticipants,
-                  'createdAt': FieldValue.serverTimestamp(),
-                });
-
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Event created.')));
-              },
-              child: const Text('Create'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  final List<Widget> _screens = const [
+    VolunteerOpportunitiesScreen(),
+    AttendanceTrackingScreen(),
+    EventReportsScreen(),
+  ];
 
   @override
   Widget build(BuildContext context) {
-    if (_ngoUid == null) {
-      return const Scaffold(
-        body: Center(child: Text('User not authenticated')),
-      );
-    }
-
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('NGO Dashboard'),
+      body: _screens[_currentIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (i) => setState(() => _currentIndex = i),
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.group_add), label: "Opportunities"),
+          BottomNavigationBarItem(icon: Icon(Icons.access_time), label: "Attendance"),
+          BottomNavigationBarItem(icon: Icon(Icons.report), label: "Reports"),
+        ],
       ),
+    );
+  }
+}
+
+// Volunteer Opportunities (Simple placeholder)
+class VolunteerOpportunitiesScreen extends StatelessWidget {
+  const VolunteerOpportunitiesScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("Volunteer Opportunities")),
+      body: const Center(child: Text("Opportunity creation and listing goes here.")),
+    );
+  }
+}
+
+// Attendance Screen (from your latest version)
+class AttendanceTrackingScreen extends StatelessWidget {
+  const AttendanceTrackingScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("Attendance & Hours")),
       body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('events')
-            .where('ngoId', isEqualTo: _ngoUid)
-            .orderBy('date')
-            .snapshots(),
+        stream: FirebaseFirestore.instance.collection('events').snapshots(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text('No events yet.'));
-          }
+          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+          final events = snapshot.data!.docs;
 
-          return ListView(
-            children: snapshot.data!.docs.map((doc) {
-              final data = doc.data() as Map<String, dynamic>;
-              final title = data['title']?.toString() ?? 'Untitled';
-              final location = data['location']?.toString() ?? 'Unknown';
-              final Timestamp? dateTs = data['date'] as Timestamp?;
-              final DateTime date = dateTs?.toDate() ?? DateTime.now();
-              final List<dynamic> participants = data['participants'] as List<dynamic>? ?? [];
-              final String report = data['report']?.toString() ?? '';
+          return ListView.builder(
+            itemCount: events.length,
+            itemBuilder: (context, index) {
+              final event = events[index];
+              final data = event.data() as Map<String, dynamic>;
 
-              return Card(
-                margin: const EdgeInsets.all(8),
-                child: ListTile(
-                  title: Text(title),
-                  subtitle: Text(
-                    'Location: $location\nDate: ${DateFormat.yMMMd().format(date)}\nParticipants: ${participants.length}' +
-                        (report.isNotEmpty ? '\nReport: $report' : ''),
-                  ),
-                  isThreeLine: true,
-                  trailing: PopupMenuButton<String>(
-                    onSelected: (value) {
-                      if (value == 'edit') {
-                        _editEvent(doc.reference, data);
-                      } else if (value == 'delete') {
-                        _deleteEvent(doc.reference);
-                      } else if (value == 'report') {
-                        _postEventReport(doc.reference);
-                      }
-                    },
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(value: 'edit', child: Text('Edit')),
-                      const PopupMenuItem(value: 'delete', child: Text('Delete')),
-                      const PopupMenuItem(value: 'report', child: Text('Post Report')),
-                    ],
-                  ),
-                ),
+              return ListTile(
+                title: Text(data['title'] ?? 'Untitled Event'),
+                subtitle: const Text("Tap to view attendance"),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => AttendanceDetailScreen(eventId: event.id)),
+                  );
+                },
               );
-            }).toList(),
+            },
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showCreateEventDialog,
-        // ignore: sort_child_properties_last
-        child: const Icon(Icons.add),
-        tooltip: 'Create Event',
+    );
+  }
+}
+
+class AttendanceDetailScreen extends StatelessWidget {
+  final String eventId;
+
+  const AttendanceDetailScreen({super.key, required this.eventId});
+
+  @override
+  Widget build(BuildContext context) {
+    final attendeesRef = FirebaseFirestore.instance
+        .collection('events')
+        .doc(eventId)
+        .collection('attendance');
+
+    return Scaffold(
+      appBar: AppBar(title: const Text("Attendance Details")),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: attendeesRef.snapshots(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) return const CircularProgressIndicator();
+
+          final attendees = snapshot.data!.docs;
+
+          return ListView.builder(
+            itemCount: attendees.length,
+            itemBuilder: (context, index) {
+              final attendee = attendees[index];
+              final data = attendee.data() as Map<String, dynamic>;
+              final hours = data['hours'] ?? 0;
+
+              return ListTile(
+                title: Text(data['name'] ?? ''),
+                subtitle: Text('Hours: $hours'),
+                trailing: IconButton(
+                  icon: const Icon(Icons.edit),
+                  onPressed: () async {
+                    final controller = TextEditingController(text: hours.toString());
+                    final result = await showDialog<String>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text("Update Hours"),
+                        content: TextField(
+                          controller: controller,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(labelText: "Hours Served"),
+                        ),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, controller.text),
+                            child: const Text("Save"),
+                          ),
+                        ],
+                      ),
+                    );
+
+                    if (result != null) {
+                      final parsed = int.tryParse(result);
+                      if (parsed != null) {
+                        await attendee.reference.update({'hours': parsed});
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text("${data['name']}'s hours updated to $parsed")),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Invalid input. Please enter a number.')),
+                        );
+                      }
+                    }
+                  },
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+// Event Reports Screen (enhanced version)
+class EventReportsScreen extends StatelessWidget {
+  const EventReportsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("Post Event Reports")),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance.collection('events').snapshots(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+          final events = snapshot.data!.docs;
+
+          return ListView.builder(
+            itemCount: events.length,
+            itemBuilder: (context, index) {
+              final data = events[index].data() as Map<String, dynamic>;
+              final eventId = events[index].id;
+
+              return ListTile(
+                title: Text(data['title'] ?? 'Untitled Event'),
+                subtitle: const Text("Tap to add/view reports"),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ReportDetailScreen(eventId: eventId, eventTitle: data['title'] ?? 'Event'),
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+class ReportDetailScreen extends StatefulWidget {
+  final String eventId;
+  final String eventTitle;
+
+  const ReportDetailScreen({super.key, required this.eventId, required this.eventTitle});
+
+  @override
+  State<ReportDetailScreen> createState() => _ReportDetailScreenState();
+}
+
+class _ReportDetailScreenState extends State<ReportDetailScreen> {
+  final TextEditingController reportController = TextEditingController();
+
+  @override
+  Widget build(BuildContext context) {
+    final reportRef = FirebaseFirestore.instance
+        .collection('events')
+        .doc(widget.eventId)
+        .collection('reports');
+
+    return Scaffold(
+      appBar: AppBar(title: Text("${widget.eventTitle} Reports")),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: TextField(
+              controller: reportController,
+              maxLines: 4,
+              decoration: const InputDecoration(
+                labelText: "Write your report...",
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final text = reportController.text.trim();
+              if (text.isNotEmpty) {
+                await reportRef.add({
+                  'content': text,
+                  'timestamp': Timestamp.now(),
+                  'author': 'NGO Admin',
+                });
+                reportController.clear();
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Report submitted successfully')),
+                );
+              }
+            },
+            child: const Text("Submit Report"),
+          ),
+          const Divider(height: 30),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 12.0),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text("Previous Reports", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: reportRef.orderBy('timestamp', descending: true).snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+
+                final reports = snapshot.data!.docs;
+
+                if (reports.isEmpty) {
+                  return const Center(child: Text("No reports submitted yet."));
+                }
+
+                return ListView.builder(
+                  itemCount: reports.length,
+                  itemBuilder: (context, index) {
+                    final data = reports[index].data() as Map<String, dynamic>;
+                    final content = data['content'] ?? '';
+                    final author = data['author'] ?? 'Unknown';
+                    final timestamp = (data['timestamp'] as Timestamp).toDate();
+
+                    return ListTile(
+                      title: Text(content.length > 100 ? '${content.substring(0, 100)}...' : content),
+                      subtitle: Text("By $author on ${timestamp.toLocal()}"),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

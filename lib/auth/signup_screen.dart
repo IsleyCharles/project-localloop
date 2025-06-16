@@ -63,7 +63,7 @@ class _SignupScreenState extends State<SignupScreen> {
       } else if (_selectedRole == 'ngo') {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const NgoDashboardScreen()),
+          MaterialPageRoute(builder: (_) => const NgoDashboardMain()),
         );
       } else {
         Navigator.pushReplacement(

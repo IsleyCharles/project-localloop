@@ -41,6 +41,9 @@ dependencies:
   intl: ^0.20.2
   pdf: ^3.11.3
   printing: ^5.14.2
+  file_picker: ^6.1.1
+  firebase_storage: 12.4.6
+  url_launcher: ^6.2.6
 
 dev_dependencies:
   flutter_test:
@@ -52,6 +55,9 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+
+dependency_overrides:
+  url_launcher: ^6.2.6
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
