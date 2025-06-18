@@ -1,3 +1,5 @@
+// ManageOpportunitiesScreen.dart
+// This screen allows NGO admins to create and manage volunteer opportunities, including title, location, and date.
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -9,10 +11,12 @@ class ManageOpportunitiesScreen extends StatefulWidget {
 }
 
 class _ManageOpportunitiesScreenState extends State<ManageOpportunitiesScreen> {
+  // Controllers for opportunity form fields
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
   DateTime? _selectedDate;
 
+  // Create a new opportunity in Firestore
   Future<void> _createOpportunity() async {
     if (_titleController.text.isEmpty || _locationController.text.isEmpty || _selectedDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Fill all fields')));
@@ -32,6 +36,7 @@ class _ManageOpportunitiesScreenState extends State<ManageOpportunitiesScreen> {
     Navigator.pop(context);
   }
 
+  // Show dialog to create a new opportunity
   void _showCreateDialog() {
     showDialog(
       context: context,
@@ -73,6 +78,7 @@ class _ManageOpportunitiesScreenState extends State<ManageOpportunitiesScreen> {
     );
   }
 
+  // Delete an opportunity from Firestore
   Future<void> _deleteOpportunity(DocumentReference ref) async {
     await ref.delete();
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Opportunity deleted')));

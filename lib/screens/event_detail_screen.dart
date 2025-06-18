@@ -1,8 +1,11 @@
+// event_detail_screen.dart
+// This screen displays detailed information about a specific event, allows users to join, and submit feedback.
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class EventDetailScreen extends StatefulWidget {
+  // Event data passed from the previous screen
   final Map<String, dynamic> eventData;
 
   const EventDetailScreen({super.key, required this.eventData});
@@ -23,6 +26,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     _checkIfJoined();
   }
 
+  // Check if the current user has joined the event
   void _checkIfJoined() async {
     final uid = user?.uid;
     final participants = List<String>.from(widget.eventData['participants'] ?? []);
@@ -32,6 +36,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     });
   }
 
+  // Submit feedback for the event
   Future<void> _submitFeedback() async {
     final docRef = widget.eventData['docRef'] as DocumentReference?;
     final uid = user?.uid;

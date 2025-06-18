@@ -1,3 +1,5 @@
+// admin_dashboard.dart
+// This screen provides the main dashboard for admin users, including user management, event statistics, and PDF report generation.
 // ignore_for_file: sort_child_properties_last, unnecessary_to_list_in_spreads
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -26,6 +28,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     _loadUserRole();
   }
 
+  // Loads the current user's role from Firestore
   void _loadUserRole() async {
     final uid = _auth.currentUser?.uid;
     if (uid != null) {
@@ -35,12 +38,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       });
 
       // Load dashboard stats
-
       setState(() {
       });
     }
   }
 
+  // Handles logout logic with confirmation dialog
   Future<void> _logout() async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -64,10 +67,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
   }
 
+  // Shows the dialog to create a new event
   void _showCreateEventDialog() {
     _showEventDialog();
   }
 
+  // Shows the event dialog for creating or editing an event
   void _showEventDialog({DocumentSnapshot? eventDoc}) {
     final isEdit = eventDoc != null;
     final titleController = TextEditingController(text: isEdit ? eventDoc['title'] : '');
@@ -177,6 +182,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
+  // Deletes an event after confirmation
   Future<void> _deleteEvent(DocumentReference eventRef) async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -197,6 +203,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
   }
 
+  // Sends a notification to all participants of an event
   Future<void> _sendNotificationToParticipants(
     DocumentReference eventRef,
     List<dynamic> participants,
@@ -233,16 +240,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
   }
 
+  // Retrieves the total user count from Firestore
   Future<int> _getUserCount() async {
     final snapshot = await FirebaseFirestore.instance.collection('users').get();
     return snapshot.docs.length;
   }
 
+  // Retrieves the total event count from Firestore
   Future<int> _getEventCount() async {
     final snapshot = await FirebaseFirestore.instance.collection('events').get();
     return snapshot.docs.length;
   }
 
+  // Calculates the total number of participants across all events
   Future<int> _getTotalParticipantsCount() async {
     final snapshot = await FirebaseFirestore.instance.collection('events').get();
     int totalParticipants = 0;
@@ -253,11 +263,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return totalParticipants;
   }
 
+  // Alias for _getUserCount for PopupMenuButton
   Future<int> _getRegisteredUserCount() async {
-    // Alias for _getUserCount for PopupMenuButton
     return _getUserCount();
   }
 
+  // Displays the list of participants for an event
   void _showParticipantList(List<dynamic> participants) {
     showDialog(
       context: context,
@@ -283,6 +294,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
+  // Exports the event data to a PDF file
   void _exportEventsToPDF(List<QueryDocumentSnapshot> docs) async {
     final pdf = pw.Document();
     final dateFormat = DateFormat('yyyy-MM-dd');
@@ -311,6 +323,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save());
   }
 
+  // Displays the analytics summary for events
   void _showAnalyticsSummary(List<QueryDocumentSnapshot> docs) {
     int totalEvents = docs.length;
     int totalParticipants = 0;
@@ -337,6 +350,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
+  // Displays the feedback received for an event
   void _showFeedbackList(DocumentReference eventRef) async {
     final snapshot = await eventRef.collection('feedback').orderBy('timestamp', descending: true).get();
 

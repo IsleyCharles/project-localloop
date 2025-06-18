@@ -1,8 +1,11 @@
+// dashboard_layout.dart
+// This widget provides a common dashboard layout for different user roles, displaying a header, content, and navigation bar.
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class DashboardLayout extends StatefulWidget {
+  // The user's role and the main content widget to display
   final String role;
   final Widget content;
 
@@ -21,6 +24,7 @@ class _DashboardLayoutState extends State<DashboardLayout> {
     _fetchUserName();
   }
 
+  // Fetches the user's name from Firestore
   Future<void> _fetchUserName() async {
     String uid = FirebaseAuth.instance.currentUser!.uid;
     DocumentSnapshot userDoc =
@@ -34,6 +38,7 @@ class _DashboardLayoutState extends State<DashboardLayout> {
 
   int _selectedIndex = 0;
 
+  // Handles navigation bar taps
   void _onNavTapped(int index) {
     setState(() {
       _selectedIndex = index;
@@ -42,6 +47,7 @@ class _DashboardLayoutState extends State<DashboardLayout> {
 
   @override
   Widget build(BuildContext context) {
+    // Main dashboard layout with header, content, and navigation
     return Scaffold(
       appBar: AppBar(
         title: Text('Welcome, $_userName!'),

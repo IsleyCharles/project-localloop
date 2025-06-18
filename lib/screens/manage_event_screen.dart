@@ -1,3 +1,5 @@
+// manage_event_screen.dart
+// This screen allows NGO admins to manage event details, update event info, upload attachments, and view participants.
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -5,6 +7,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 class ManageEventScreen extends StatefulWidget {
+  // The Firestore document for the event being managed
   final DocumentSnapshot eventDoc;
   const ManageEventScreen({super.key, required this.eventDoc});
 
@@ -21,6 +24,7 @@ class _ManageEventScreenState extends State<ManageEventScreen> {
   @override
   void initState() {
     super.initState();
+    // Initialize controllers and event data from Firestore document
     final data = widget.eventDoc.data() as Map<String, dynamic>;
     _titleController = TextEditingController(text: data['title']);
     _descriptionController = TextEditingController(text: data['description']);
@@ -28,6 +32,7 @@ class _ManageEventScreenState extends State<ManageEventScreen> {
     eventId = widget.eventDoc.id;
   }
 
+  // Save changes to event details in Firestore
   Future<void> _saveChanges() async {
     await widget.eventDoc.reference.update({
       'title': _titleController.text.trim(),
@@ -37,6 +42,7 @@ class _ManageEventScreenState extends State<ManageEventScreen> {
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Event updated')));
   }
 
+  // Upload a file to Firebase Storage and update event attachments
   Future<void> _uploadFile() async {
     final result = await FilePicker.platform.pickFiles();
     if (result != null && result.files.single.path != null) {
@@ -55,6 +61,7 @@ class _ManageEventScreenState extends State<ManageEventScreen> {
     }
   }
 
+  // Build a list of event participants
   Widget _buildParticipantList() {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance

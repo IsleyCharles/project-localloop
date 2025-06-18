@@ -1,3 +1,5 @@
+// AttendanceTrackingScreen.dart
+// This screen allows NGOs to track attendance and hours for each event, and provides access to event attachments.
 // ignore_for_file: file_names
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -16,6 +18,7 @@ class _AttendanceTrackingScreenState extends State<AttendanceTrackingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Scaffold with a list of events and attendance actions
     return Scaffold(
       appBar: AppBar(title: const Text("Attendance & Hours Tracking")),
       body: StreamBuilder<QuerySnapshot>(
@@ -44,16 +47,18 @@ class _AttendanceTrackingScreenState extends State<AttendanceTrackingScreen> {
                     if (eventData['attachments'] != null && eventData['attachments'] is List)
                       ...List<Widget>.from(
                         (eventData['attachments'] as List)
-                            .map((url) => ListTile(
-                                  leading: const Icon(Icons.attach_file),
-                                  title: Text(url.toString().split('/').last),
-                                  trailing: IconButton(
-                                    icon: const Icon(Icons.open_in_new),
-                                    onPressed: () => launchUrl(Uri.parse(url)),
-                                  ),
-                                )),
+                            .map(
+                              (url) => ListTile(
+                                leading: const Icon(Icons.attach_file),
+                                title: Text(url.toString().split('/').last),
+                                trailing: IconButton(
+                                  icon: const Icon(Icons.open_in_new),
+                                  onPressed: () => launchUrl(Uri.parse(url)),
+                                ),
+                              ),
+                            ),
                       ),
-                  ],
+                  ], // End of ExpansionTile children
                 ),
               );
             },
@@ -63,6 +68,7 @@ class _AttendanceTrackingScreenState extends State<AttendanceTrackingScreen> {
     );
   }
 
+  // Opens a dialog to mark attendance for the selected event
   void _openAttendanceDialog(String eventId) async {
     final volunteersSnap = await _firestore
         .collection('users')

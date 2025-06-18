@@ -1,5 +1,8 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/material.dart';
+// VolunteerProfilesScreen.dart
+// Displays a list of volunteer users and allows role assignment.
+
+import 'package:cloud_firestore/cloud_firestore.dart'; // Firestore database
+import 'package:flutter/material.dart'; // Flutter UI framework
 
 class VolunteerProfilesScreen extends StatelessWidget {
   const VolunteerProfilesScreen({super.key});
@@ -14,9 +17,11 @@ class VolunteerProfilesScreen extends StatelessWidget {
             .where('role', isEqualTo: 'volunteer')
             .snapshots(),
         builder: (context, snapshot) {
+          // Show a loading indicator while waiting for data
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
+          // If no data is found, display a message
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return const Center(child: Text('No volunteers found.'));
           }
@@ -52,6 +57,7 @@ class VolunteerProfilesScreen extends StatelessWidget {
                       return DropdownMenuItem(value: role, child: Text(role));
                     }).toList(),
                     onChanged: (newRole) {
+                      // When a new role is selected, show a confirmation dialog
                       if (newRole != null && newRole != currentRole) {
                         showDialog(
                           context: context,
@@ -65,7 +71,9 @@ class VolunteerProfilesScreen extends StatelessWidget {
                               TextButton(
                                 onPressed: () async {
                                   Navigator.pop(context);
+                                  // Update the user's role in the database
                                   await docRef.update({'assignedRole': newRole});
+                                  // Show a snackbar notification
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                       content: Text("$name is now a $newRole"),

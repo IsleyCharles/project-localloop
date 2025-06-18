@@ -1,12 +1,15 @@
+// signup_screen.dart
+// Handles user registration, role selection, and navigation to dashboards.
+
 // ignore_for_file: avoid_print
 
-import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart'; // Flutter UI framework
+import 'package:firebase_auth/firebase_auth.dart'; // Firebase Authentication
+import 'package:cloud_firestore/cloud_firestore.dart'; // Firestore database
 
-import '../screens/admin_dashboard.dart';
-import '../screens/ngo_dashboard.dart';
-import '../screens/volunteer_dashboard.dart';
+import '../screens/admin_dashboard.dart'; // Admin dashboard
+import '../screens/ngo_dashboard.dart'; // NGO dashboard
+import '../screens/volunteer_dashboard.dart'; // Volunteer dashboard
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -16,6 +19,7 @@ class SignupScreen extends StatefulWidget {
 }
 
 class _SignupScreenState extends State<SignupScreen> {
+  // Controllers for form fields
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _nameController = TextEditingController();
@@ -26,6 +30,7 @@ class _SignupScreenState extends State<SignupScreen> {
   final _auth = FirebaseAuth.instance;
   final _firestore = FirebaseFirestore.instance;
 
+  // Handles user signup and navigation
   void _signup() async {
     setState(() => _isLoading = true);
 
@@ -68,7 +73,7 @@ class _SignupScreenState extends State<SignupScreen> {
       } else {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => VolunteerDashboardScreen()), // Fixed class name
+          MaterialPageRoute(builder: (_) => VolunteerDashboardScreen()),
         );
       }
     } on FirebaseAuthException catch (e) {
@@ -89,20 +94,23 @@ class _SignupScreenState extends State<SignupScreen> {
         child: SingleChildScrollView(
           child: Column(
             children: [
+              // Name input
               TextField(
                 controller: _nameController,
                 decoration: const InputDecoration(labelText: 'Name'),
               ),
+              // Email input
               TextField(
                 controller: _emailController,
                 decoration: const InputDecoration(labelText: 'Email'),
               ),
+              // Password input
               TextField(
                 controller: _passwordController,
                 decoration: const InputDecoration(labelText: 'Password'),
                 obscureText: true,
               ),
-              const SizedBox(height: 10),
+              // Role selection dropdown
               DropdownButtonFormField<String>(
                 value: _selectedRole,
                 items:
@@ -116,6 +124,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 decoration: const InputDecoration(labelText: 'Select Role'),
               ),
               const SizedBox(height: 20),
+              // Signup button
               _isLoading
                   ? const CircularProgressIndicator()
                   : ElevatedButton(

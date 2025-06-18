@@ -1,7 +1,10 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
-import 'event_detail_screen.dart';
+// volunteer_dashboard.dart
+// Volunteer dashboard: shows events, allows feedback, notifications, and logout.
+
+import 'package:cloud_firestore/cloud_firestore.dart'; // Firestore database
+import 'package:firebase_auth/firebase_auth.dart'; // Firebase Authentication
+import 'package:flutter/material.dart'; // Flutter UI framework
+import 'event_detail_screen.dart'; // Event detail page
 
 class VolunteerDashboardScreen extends StatefulWidget {
   const VolunteerDashboardScreen({super.key});
@@ -22,6 +25,7 @@ class VolunteerDashboardScreenState extends State<VolunteerDashboardScreen> {
     _loadVolunteerName();
   }
 
+  // Loads the volunteer's name from Firestore
   Future<void> _loadVolunteerName() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid != null) {
@@ -36,6 +40,7 @@ class VolunteerDashboardScreenState extends State<VolunteerDashboardScreen> {
     }
   }
 
+  // Shows a confirmation dialog and logs out the user
   void _confirmLogout() {
     showDialog(
       context: context,
@@ -60,10 +65,12 @@ class VolunteerDashboardScreenState extends State<VolunteerDashboardScreen> {
     );
   }
 
+  // Helper to check if two dates are the same day
   bool _isSameDay(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
+  // Submits feedback to Firestore
   Future<void> _submitFeedback() async {
     final feedback = feedbackController.text.trim();
     if (feedback.isEmpty) return;
@@ -78,6 +85,7 @@ class VolunteerDashboardScreenState extends State<VolunteerDashboardScreen> {
     );
   }
 
+  // Shows notifications in a dialog
   void _showNotifications() {
     showDialog(
       context: context,
@@ -133,6 +141,7 @@ class VolunteerDashboardScreenState extends State<VolunteerDashboardScreen> {
       ),
       body: Column(
         children: [
+          // Search bar
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: TextField(
@@ -144,6 +153,7 @@ class VolunteerDashboardScreenState extends State<VolunteerDashboardScreen> {
               ),
             ),
           ),
+          // Filter chips
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Row(
@@ -163,6 +173,7 @@ class VolunteerDashboardScreenState extends State<VolunteerDashboardScreen> {
               ],
             ),
           ),
+          // Event list
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
@@ -215,6 +226,7 @@ class VolunteerDashboardScreenState extends State<VolunteerDashboardScreen> {
               },
             ),
           ),
+          // Feedback section
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(

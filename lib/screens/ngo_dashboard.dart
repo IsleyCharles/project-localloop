@@ -1,3 +1,5 @@
+// ngo_dashboard.dart
+// This screen provides the main dashboard for NGO users, allowing them to manage opportunities, view volunteer profiles, track attendance, and post event reports.
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:localloop/screens/ManageOpportunitiesScreen.dart';
@@ -5,6 +7,7 @@ import 'package:localloop/screens/VolunteerProfilesScreen.dart';
 import 'package:localloop/screens/manage_event_screen.dart';
 
 class NgoDashboardScreen extends StatefulWidget {
+  // Constructor for the NGO dashboard screen
   const NgoDashboardScreen({super.key});
 
   @override
@@ -12,8 +15,10 @@ class NgoDashboardScreen extends StatefulWidget {
 }
 
 class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
+  // Firestore instance for database operations
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  // Handles logout logic with confirmation dialog
   Future<void> _logout() async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -34,6 +39,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Main dashboard layout with sections for each major NGO function
     return Scaffold(
       appBar: AppBar(
         title: const Text('NGO Dashboard'),
@@ -63,11 +69,15 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
     );
   }
 
-  Widget _buildSectionTitle(String title) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12.0),
-        child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-      );
+  // Helper to build section titles
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12.0),
+      child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+    );
+  }
 
+  // Widget for managing volunteer opportunities
   Widget _buildVolunteerOpportunities() {
     return ElevatedButton.icon(
       onPressed: () {
@@ -83,6 +93,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
     );
   }
 
+  // Widget for viewing volunteer profiles
   Widget _buildVolunteerProfiles() {
     return StreamBuilder<QuerySnapshot>(
       stream: _firestore.collection('volunteers').snapshots(),
@@ -118,21 +129,23 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
     );
   }
 
+  // Widget for viewing volunteer profiles
   Widget _buildVolunteerProfilesButton() {
-    return ElevatedButton.icon(
-      onPressed: () {
-        Navigator.push(
+    // Button to navigate to the full volunteer profiles screen
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: ElevatedButton.icon(
+        icon: const Icon(Icons.person_search),
+        label: const Text('See All Volunteers'),
+        onPressed: () => Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (_) => VolunteerProfilesScreen(),
-          ),
-        );
-      },
-      icon: const Icon(Icons.people),
-      label: const Text('View Volunteer Profiles'),
+          MaterialPageRoute(builder: (_) => const VolunteerProfilesScreen()),
+        ),
+      ),
     );
   }
 
+  // Widget for managing event attendance
   Widget _buildAttendanceTracker() {
     return StreamBuilder<QuerySnapshot>(
       stream: _firestore.collection('events').snapshots(),
@@ -166,6 +179,7 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
     );
   }
 
+  // Widget for posting/viewing event reports
   Widget _buildEventReports() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

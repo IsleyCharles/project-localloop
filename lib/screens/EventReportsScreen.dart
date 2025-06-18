@@ -1,3 +1,5 @@
+// EventReportsScreen.dart
+// This screen allows users to view and post event reports for completed events.
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -6,6 +8,7 @@ class EventReportsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Scaffold with a list of events to select for posting/viewing reports
     return Scaffold(
       appBar: AppBar(title: const Text("Post Event Reports")),
       body: StreamBuilder<QuerySnapshot>(
@@ -19,14 +22,17 @@ class EventReportsScreen extends StatelessWidget {
             itemBuilder: (context, index) {
               final data = events[index].data() as Map<String, dynamic>;
               final eventId = events[index].id;
-
               return ListTile(
                 title: Text(data['title'] ?? 'Untitled Event'),
                 subtitle: const Text("Tap to add/view reports"),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => ReportDetailScreen(eventId: eventId, eventTitle: data['title'] ?? 'Event')),
-                ),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ReportDetailScreen(eventId: eventId, eventTitle: data['title'] ?? 'Event'),
+                    ),
+                  );
+                },
               );
             },
           );
@@ -36,6 +42,7 @@ class EventReportsScreen extends StatelessWidget {
   }
 }
 
+// Screen for posting and viewing reports for a specific event
 class ReportDetailScreen extends StatefulWidget {
   final String eventId;
   final String eventTitle;
