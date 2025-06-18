@@ -14,6 +14,51 @@ class VolunteerDashboardScreenState extends State<VolunteerDashboardScreen> {
   String searchTerm = '';
   String filterType = 'upcoming';
   final TextEditingController feedbackController = TextEditingController();
+  String? _volunteerName;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVolunteerName();
+  }
+
+  Future<void> _loadVolunteerName() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      final doc = await FirebaseFirestore.instance.collection('volunteers').doc(uid).get();
+      setState(() {
+        _volunteerName = doc.data()?['name'] ?? 'Volunteer';
+      });
+    } else {
+      setState(() {
+        _volunteerName = 'Volunteer';
+      });
+    }
+  }
+
+  void _confirmLogout() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Confirm Logout'),
+        content: const Text('Are you sure you want to log out?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              await FirebaseAuth.instance.signOut();
+              if (!mounted) return;
+              Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+            },
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+  }
 
   bool _isSameDay(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;
@@ -22,15 +67,12 @@ class VolunteerDashboardScreenState extends State<VolunteerDashboardScreen> {
   Future<void> _submitFeedback() async {
     final feedback = feedbackController.text.trim();
     if (feedback.isEmpty) return;
-
     await FirebaseFirestore.instance.collection('feedback').add({
       'userId': FirebaseAuth.instance.currentUser?.uid,
       'message': feedback,
       'timestamp': Timestamp.now(),
     });
-
     feedbackController.clear();
-
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Feedback submitted')),
     );
@@ -72,37 +114,12 @@ class VolunteerDashboardScreenState extends State<VolunteerDashboardScreen> {
     );
   }
 
-  void _confirmLogout() {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Confirm Logout'),
-        content: const Text('Are you sure you want to log out?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              await FirebaseAuth.instance.signOut();
-              if (!mounted) return;
-              Navigator.of(context).popUntil((route) => route.isFirst);
-            },
-            child: const Text('Logout'),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
-
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Welcome, Volunteer'),
+        title: Text('Welcome, ${_volunteerName ?? 'Volunteer'}'),
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications),
@@ -116,7 +133,6 @@ class VolunteerDashboardScreenState extends State<VolunteerDashboardScreen> {
       ),
       body: Column(
         children: [
-          // Search Bar
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: TextField(
@@ -128,8 +144,6 @@ class VolunteerDashboardScreenState extends State<VolunteerDashboardScreen> {
               ),
             ),
           ),
-
-          // Filter Buttons
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Row(
@@ -149,8 +163,6 @@ class VolunteerDashboardScreenState extends State<VolunteerDashboardScreen> {
               ],
             ),
           ),
-
-          // Event List
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
@@ -161,11 +173,9 @@ class VolunteerDashboardScreenState extends State<VolunteerDashboardScreen> {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
-
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                   return const Center(child: Text("No events available."));
                 }
-
                 final filteredEvents = snapshot.data!.docs.where((doc) {
                   final data = doc.data() as Map<String, dynamic>;
                   final title = data['title']?.toLowerCase() ?? '';
@@ -178,50 +188,23 @@ class VolunteerDashboardScreenState extends State<VolunteerDashboardScreen> {
                   final isPast = eventDate.isBefore(now) && !_isSameDay(eventDate, now);
                   return filterType == 'upcoming' ? matchesSearch && isUpcoming : matchesSearch && isPast;
                 }).toList();
-
-                if (filteredEvents.isEmpty) {
-                  return const Center(child: Text("No matching events found."));
-                }
-
                 return ListView.builder(
                   itemCount: filteredEvents.length,
                   itemBuilder: (context, index) {
                     final doc = filteredEvents[index];
                     final data = doc.data() as Map<String, dynamic>;
-                    final participants = data['participants'] as List<dynamic>? ?? [];
-                    final eventDate = (data['date'] as Timestamp?)?.toDate();
-                    final isToday = eventDate != null && _isSameDay(eventDate, DateTime.now());
-                    final isFull = participants.length >= (data['maxParticipants'] ?? 9999);
-
+                    final eventDate = data['date'] is Timestamp
+                        ? (data['date'] as Timestamp).toDate()
+                        : DateTime.tryParse(data['date']?.toString() ?? '');
                     return Card(
-                      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       child: ListTile(
-                        title: Row(
-                          children: [
-                            Expanded(child: Text(data['title'] ?? 'No Title')),
-                            if (isToday)
-                              _tag('Today', Colors.blue),
-                            if (isFull)
-                              _tag('Full', Colors.red),
-                          ],
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(data['location'] ?? 'No Location'),
-                            Text('👥 Participants: ${participants.length}'),
-                          ],
-                        ),
+                        title: Text(data['title'] ?? ''),
+                        subtitle: Text('Date: ${eventDate != null ? eventDate.toLocal().toString().split(' ')[0] : ''}'),
                         onTap: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => EventDetailScreen(
-                                eventData: {
-                                  ...data,
-                                  'docRef': doc.reference,
-                                },
-                              ),
+                              builder: (_) => EventDetailScreen(eventData: data),
                             ),
                           );
                         },
@@ -232,43 +215,30 @@ class VolunteerDashboardScreenState extends State<VolunteerDashboardScreen> {
               },
             ),
           ),
-
-          // Feedback Section
           Padding(
-            padding: const EdgeInsets.all(12.0),
+            padding: const EdgeInsets.all(16.0),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text('Share your feedback:', style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
                 TextField(
                   controller: feedbackController,
-                  decoration: InputDecoration(
-                    hintText: 'Your feedback...',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.send),
-                      onPressed: _submitFeedback,
-                    ),
+                  decoration: const InputDecoration(
+                    labelText: 'Send Feedback',
+                    border: OutlineInputBorder(),
                   ),
+                  minLines: 1,
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 8),
+                ElevatedButton(
+                  onPressed: _submitFeedback,
+                  child: const Text('Submit Feedback'),
                 ),
               ],
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _tag(String label, Color color) {
-    return Container(
-      margin: const EdgeInsets.only(left: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        // ignore: deprecated_member_use
-        color: color.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(label, style: TextStyle(fontSize: 12, color: color)),
     );
   }
 }

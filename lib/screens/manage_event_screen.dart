@@ -79,7 +79,7 @@ class _ManageEventScreenState extends State<ManageEventScreen> {
                 title: Text(data['name'] ?? 'Unnamed'),
                 subtitle: Text(data['email'] ?? ''),
               );
-            }).toList(),
+            }),
           ],
         );
       },

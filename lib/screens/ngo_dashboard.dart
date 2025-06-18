@@ -1,300 +1,239 @@
-import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
+import 'package:localloop/screens/ManageOpportunitiesScreen.dart';
+import 'package:localloop/screens/VolunteerProfilesScreen.dart';
+import 'package:localloop/screens/manage_event_screen.dart';
 
-void main() {
-  runApp(const MaterialApp(home: NgoDashboardMain()));
-}
-
-class NgoDashboardMain extends StatefulWidget {
-  const NgoDashboardMain({super.key});
+class NgoDashboardScreen extends StatefulWidget {
+  const NgoDashboardScreen({super.key});
 
   @override
-  State<NgoDashboardMain> createState() => _NgoDashboardMainState();
+  State<NgoDashboardScreen> createState() => _NgoDashboardScreenState();
 }
 
-class _NgoDashboardMainState extends State<NgoDashboardMain> {
-  int _currentIndex = 0;
+class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  final List<Widget> _screens = const [
-    VolunteerOpportunitiesScreen(),
-    AttendanceTrackingScreen(),
-    EventReportsScreen(),
-  ];
+  Future<void> _logout() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Logout')),
+        ],
+      ),
+    );
+    if (confirm == true) {
+      // Add your logout logic here, e.g. FirebaseAuth.instance.signOut();
+      Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _screens[_currentIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (i) => setState(() => _currentIndex = i),
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.group_add), label: "Opportunities"),
-          BottomNavigationBarItem(icon: Icon(Icons.access_time), label: "Attendance"),
-          BottomNavigationBarItem(icon: Icon(Icons.report), label: "Reports"),
+      appBar: AppBar(
+        title: const Text('NGO Dashboard'),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Logout',
+            onPressed: _logout,
+          ),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16.0),
+        children: [
+          _buildSectionTitle('1. Volunteer Opportunities'),
+          _buildVolunteerOpportunities(),
+          _buildSectionTitle('2. Volunteer Profiles & Roles'),
+          _buildVolunteerProfiles(),
+          _buildVolunteerProfilesButton(),
+          _buildSectionTitle('3. Attendance & Hours Tracking'),
+          _buildAttendanceTracker(),
+          _buildSectionTitle('4. Post Event Reports & Updates'),
+          _buildEventReports(),
         ],
       ),
     );
   }
-}
 
-// Volunteer Opportunities (Simple placeholder)
-class VolunteerOpportunitiesScreen extends StatelessWidget {
-  const VolunteerOpportunitiesScreen({super.key});
+  Widget _buildSectionTitle(String title) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12.0),
+        child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+      );
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Volunteer Opportunities")),
-      body: const Center(child: Text("Opportunity creation and listing goes here.")),
+  Widget _buildVolunteerOpportunities() {
+    return ElevatedButton.icon(
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ManageOpportunitiesScreen(),
+          ),
+        );
+      },
+      icon: const Icon(Icons.add),
+      label: const Text('Create Opportunity'),
     );
   }
-}
 
-// Attendance Screen (from your latest version)
-class AttendanceTrackingScreen extends StatelessWidget {
-  const AttendanceTrackingScreen({super.key});
+  Widget _buildVolunteerProfiles() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: _firestore.collection('volunteers').snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) return const CircularProgressIndicator();
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Attendance & Hours")),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('events').snapshots(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-          final events = snapshot.data!.docs;
+        final volunteers = snapshot.data!.docs;
+        return ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: volunteers.length,
+          itemBuilder: (context, index) {
+            final data = volunteers[index].data() as Map<String, dynamic>;
+            return Card(
+              child: ListTile(
+                title: Text(data['name'] ?? 'No Name'),
+                subtitle: Text('${data['email'] ?? ''}\nRole: ${data['role'] ?? 'Unassigned'}\nHours: ${data['totalHours'] ?? 0}'),
+                isThreeLine: true,
+                trailing: DropdownButton<String>(
+                  value: data['role'] ?? 'Unassigned',
+                  items: ['Unassigned', 'Organizer', 'Helper', 'Photographer']
+                      .map((role) => DropdownMenuItem(value: role, child: Text(role)))
+                      .toList(),
+                  onChanged: (newRole) {
+                    _firestore.collection('volunteers').doc(volunteers[index].id).update({'role': newRole});
+                  },
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
 
-          return ListView.builder(
-            itemCount: events.length,
-            itemBuilder: (context, index) {
-              final event = events[index];
-              final data = event.data() as Map<String, dynamic>;
+  Widget _buildVolunteerProfilesButton() {
+    return ElevatedButton.icon(
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => VolunteerProfilesScreen(),
+          ),
+        );
+      },
+      icon: const Icon(Icons.people),
+      label: const Text('View Volunteer Profiles'),
+    );
+  }
 
-              return ListTile(
-                title: Text(data['title'] ?? 'Untitled Event'),
-                subtitle: const Text("Tap to view attendance"),
-                onTap: () {
+  Widget _buildAttendanceTracker() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: _firestore.collection('events').snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) return const CircularProgressIndicator();
+        final events = snapshot.data!.docs;
+        return ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: events.length,
+          itemBuilder: (context, index) {
+            final event = events[index];
+            return ListTile(
+              title: Text(event['title'] ?? ''),
+              subtitle: Text('Date: ${(event['date'] as Timestamp).toDate()}'),
+              trailing: ElevatedButton(
+                onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => AttendanceDetailScreen(eventId: event.id)),
+                    MaterialPageRoute(
+                      builder: (_) => ManageEventScreen(eventDoc: event),
+                    ),
                   );
                 },
-              );
-            },
-          );
-        },
-      ),
-    );
-  }
-}
-
-class AttendanceDetailScreen extends StatelessWidget {
-  final String eventId;
-
-  const AttendanceDetailScreen({super.key, required this.eventId});
-
-  @override
-  Widget build(BuildContext context) {
-    final attendeesRef = FirebaseFirestore.instance
-        .collection('events')
-        .doc(eventId)
-        .collection('attendance');
-
-    return Scaffold(
-      appBar: AppBar(title: const Text("Attendance Details")),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: attendeesRef.snapshots(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) return const CircularProgressIndicator();
-
-          final attendees = snapshot.data!.docs;
-
-          return ListView.builder(
-            itemCount: attendees.length,
-            itemBuilder: (context, index) {
-              final attendee = attendees[index];
-              final data = attendee.data() as Map<String, dynamic>;
-              final hours = data['hours'] ?? 0;
-
-              return ListTile(
-                title: Text(data['name'] ?? ''),
-                subtitle: Text('Hours: $hours'),
-                trailing: IconButton(
-                  icon: const Icon(Icons.edit),
-                  onPressed: () async {
-                    final controller = TextEditingController(text: hours.toString());
-                    final result = await showDialog<String>(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text("Update Hours"),
-                        content: TextField(
-                          controller: controller,
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(labelText: "Hours Served"),
-                        ),
-                        actions: [
-                          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
-                          TextButton(
-                            onPressed: () => Navigator.pop(context, controller.text),
-                            child: const Text("Save"),
-                          ),
-                        ],
-                      ),
-                    );
-
-                    if (result != null) {
-                      final parsed = int.tryParse(result);
-                      if (parsed != null) {
-                        await attendee.reference.update({'hours': parsed});
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text("${data['name']}'s hours updated to $parsed")),
-                        );
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Invalid input. Please enter a number.')),
-                        );
-                      }
-                    }
-                  },
-                ),
-              );
-            },
-          );
-        },
-      ),
-    );
-  }
-}
-
-// Event Reports Screen (enhanced version)
-class EventReportsScreen extends StatelessWidget {
-  const EventReportsScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Post Event Reports")),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('events').snapshots(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-          final events = snapshot.data!.docs;
-
-          return ListView.builder(
-            itemCount: events.length,
-            itemBuilder: (context, index) {
-              final data = events[index].data() as Map<String, dynamic>;
-              final eventId = events[index].id;
-
-              return ListTile(
-                title: Text(data['title'] ?? 'Untitled Event'),
-                subtitle: const Text("Tap to add/view reports"),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ReportDetailScreen(eventId: eventId, eventTitle: data['title'] ?? 'Event'),
-                  ),
-                ),
-              );
-            },
-          );
-        },
-      ),
-    );
-  }
-}
-
-class ReportDetailScreen extends StatefulWidget {
-  final String eventId;
-  final String eventTitle;
-
-  const ReportDetailScreen({super.key, required this.eventId, required this.eventTitle});
-
-  @override
-  State<ReportDetailScreen> createState() => _ReportDetailScreenState();
-}
-
-class _ReportDetailScreenState extends State<ReportDetailScreen> {
-  final TextEditingController reportController = TextEditingController();
-
-  @override
-  Widget build(BuildContext context) {
-    final reportRef = FirebaseFirestore.instance
-        .collection('events')
-        .doc(widget.eventId)
-        .collection('reports');
-
-    return Scaffold(
-      appBar: AppBar(title: Text("${widget.eventTitle} Reports")),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: TextField(
-              controller: reportController,
-              maxLines: 4,
-              decoration: const InputDecoration(
-                labelText: "Write your report...",
-                border: OutlineInputBorder(),
+                child: const Text('Manage Event'),
               ),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final text = reportController.text.trim();
-              if (text.isNotEmpty) {
-                await reportRef.add({
-                  'content': text,
-                  'timestamp': Timestamp.now(),
-                  'author': 'NGO Admin',
-                });
-                reportController.clear();
+            );
+          },
+        );
+      },
+    );
+  }
 
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Report submitted successfully')),
-                );
-              }
-            },
-            child: const Text("Submit Report"),
-          ),
-          const Divider(height: 30),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 12.0),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text("Previous Reports", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: reportRef.orderBy('timestamp', descending: true).snapshots(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-
-                final reports = snapshot.data!.docs;
-
-                if (reports.isEmpty) {
-                  return const Center(child: Text("No reports submitted yet."));
-                }
-
-                return ListView.builder(
-                  itemCount: reports.length,
-                  itemBuilder: (context, index) {
-                    final data = reports[index].data() as Map<String, dynamic>;
-                    final content = data['content'] ?? '';
-                    final author = data['author'] ?? 'Unknown';
-                    final timestamp = (data['timestamp'] as Timestamp).toDate();
-
-                    return ListTile(
-                      title: Text(content.length > 100 ? '${content.substring(0, 100)}...' : content),
-                      subtitle: Text("By $author on ${timestamp.toLocal()}"),
-                    );
-                  },
+  Widget _buildEventReports() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ElevatedButton.icon(
+          onPressed: () {
+            _showReportDialog();
+          },
+          icon: const Icon(Icons.post_add),
+          label: const Text('Post Report'),
+        ),
+        const SizedBox(height: 10),
+        StreamBuilder<QuerySnapshot>(
+          stream: _firestore.collection('eventReports').orderBy('timestamp', descending: true).snapshots(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) return const CircularProgressIndicator();
+            final reports = snapshot.data!.docs;
+            return ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: reports.length,
+              itemBuilder: (context, index) {
+                final data = reports[index].data() as Map<String, dynamic>;
+                return Card(
+                  child: ListTile(
+                    title: Text(data['title'] ?? ''),
+                    subtitle: Text(data['summary'] ?? ''),
+                  ),
                 );
               },
-            ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  void _showReportDialog() {
+    final titleController = TextEditingController();
+    final summaryController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Post Event Report'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: titleController, decoration: const InputDecoration(labelText: 'Title')),
+            TextField(controller: summaryController, decoration: const InputDecoration(labelText: 'Summary')),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () async {
+              final title = titleController.text.trim();
+              final summary = summaryController.text.trim();
+              if (title.isNotEmpty && summary.isNotEmpty) {
+                await _firestore.collection('eventReports').add({
+                  'title': title,
+                  'summary': summary,
+                  'timestamp': Timestamp.now(),
+                });
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('Post'),
           ),
         ],
       ),
