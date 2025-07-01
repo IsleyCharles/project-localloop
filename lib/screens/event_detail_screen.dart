@@ -26,10 +26,17 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     _checkIfJoined();
   }
 
-  // Check if the current user has joined the event
+  // Check if the current user has joined the event (fetches fresh data from Firestore)
   void _checkIfJoined() async {
     final uid = user?.uid;
-    final participants = List<String>.from(widget.eventData['participants'] ?? []);
+    final docRef = widget.eventData['docRef'] as DocumentReference?;
+
+    if (uid == null || docRef == null) return;
+
+    final freshSnapshot = await docRef.get();
+    final freshData = freshSnapshot.data() as Map<String, dynamic>?;
+
+    final participants = List<String>.from(freshData?['participants'] ?? []);
     setState(() {
       hasJoined = participants.contains(uid);
       isLoading = false;
@@ -94,9 +101,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                           await docRef.update({
                             'participants': FieldValue.arrayUnion([uid]),
                           });
-                          setState(() {
-                            hasJoined = true;
-                          });
+                          _checkIfJoined(); // Call without await, since it returns void
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text("Successfully joined the event!")),
                           );

@@ -61,33 +61,46 @@ class _ManageEventScreenState extends State<ManageEventScreen> {
     }
   }
 
-  // Build a list of event participants
+  // Build a list of event participants (fetches user info by UID)
   Widget _buildParticipantList() {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('events')
-          .doc(eventId)
-          .collection('participants')
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) return const CircularProgressIndicator();
-        final participants = snapshot.data!.docs;
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 20),
-            const Text("Participants", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            const SizedBox(height: 8),
-            ...participants.map((doc) {
-              final data = doc.data() as Map<String, dynamic>;
-              return ListTile(
-                leading: const Icon(Icons.person),
-                title: Text(data['name'] ?? 'Unnamed'),
-                subtitle: Text(data['email'] ?? ''),
-              );
-            }),
-          ],
+    return FutureBuilder<DocumentSnapshot>(
+      future: FirebaseFirestore.instance.collection('events').doc(eventId).get(),
+      builder: (context, eventSnapshot) {
+        if (!eventSnapshot.hasData) return const CircularProgressIndicator();
+        final eventData = eventSnapshot.data!.data() as Map<String, dynamic>?;
+        final List<dynamic> participantUids = eventData?['participants'] ?? [];
+        if (participantUids.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Text('No participants yet.'),
+          );
+        }
+        return FutureBuilder<List<DocumentSnapshot>>(
+          future: Future.wait(
+            participantUids.map((uid) =>
+              FirebaseFirestore.instance.collection('users').doc(uid).get()
+            ),
+          ),
+          builder: (context, userSnapshots) {
+            if (!userSnapshots.hasData) return const CircularProgressIndicator();
+            final users = userSnapshots.data!;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 20),
+                const Text("Participants", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const SizedBox(height: 8),
+                ...users.map((userDoc) {
+                  final userData = userDoc.data() as Map<String, dynamic>?;
+                  return ListTile(
+                    leading: const Icon(Icons.person),
+                    title: Text(userData?['name'] ?? userData?['email'] ?? 'Unnamed'),
+                    subtitle: Text(userData?['email'] ?? ''),
+                  );
+                }),
+              ],
+            );
+          },
         );
       },
     );

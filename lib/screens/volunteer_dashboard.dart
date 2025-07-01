@@ -212,10 +212,13 @@ class VolunteerDashboardScreenState extends State<VolunteerDashboardScreen> {
                         title: Text(data['title'] ?? ''),
                         subtitle: Text('Date: ${eventDate != null ? eventDate.toLocal().toString().split(' ')[0] : ''}'),
                         onTap: () {
+                          final docRef = doc.reference;
+                          final dataWithRef = Map<String, dynamic>.from(data);
+                          dataWithRef['docRef'] = docRef;
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => EventDetailScreen(eventData: data),
+                              builder: (_) => EventDetailScreen(eventData: dataWithRef),
                             ),
                           );
                         },
